@@ -87,16 +87,21 @@ export async function PUT(request: NextRequest) {
     }
 
     // Only allow specific fields (prevent mass assignment)
-    const allowedFields = ['name', 'description', 'commissionType', 'commissionValue', 'cookieDuration', 'isActive', 'terms'];
+    const allowedFields = ['name', 'description', 'commissionType', 'commissionValue', 'cookieDuration', 'isActive', 'isDefault', 'terms'];
     const updates: Record<string, any> = {};
     for (const key of allowedFields) {
       if (key in body && body[key] !== undefined) updates[key] = body[key];
     }
 
-    const program = await prisma.program.update({
-      where: { id },
-      data: updates,
-    });
+    const program = updates.isDefault
+      ? await prisma.$transaction(async (tx) => {
+          await tx.program.updateMany({
+            where: { id: { not: id }, isDefault: true },
+            data: { isDefault: false },
+          });
+          return tx.program.update({ where: { id }, data: updates });
+        })
+      : await prisma.program.update({ where: { id }, data: updates });
 
     return NextResponse.json({ success: true, program });
   } catch (error) {
