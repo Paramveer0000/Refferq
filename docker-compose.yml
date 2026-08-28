@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: builder
+      args:
+        JWT_SECRET: ${JWT_SECRET}
     command: npx prisma db push
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://refferq:refferq@db:5432/refferq}
@@ -17,6 +19,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        JWT_SECRET: ${JWT_SECRET}
     container_name: refferq-app
     restart: unless-stopped
     ports:

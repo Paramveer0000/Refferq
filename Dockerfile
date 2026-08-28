@@ -12,6 +12,8 @@ RUN npm ci
 # ---- Builder ----
 FROM base AS builder
 WORKDIR /app
+ARG JWT_SECRET
+ENV JWT_SECRET=$JWT_SECRET
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
