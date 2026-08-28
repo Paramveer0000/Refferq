@@ -139,9 +139,9 @@ export default function AffiliateDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lead_name: submitForm.leadName,
-          lead_email: submitForm.leadEmail,
-          estimated_value: submitForm.estimatedValue,
+          leadName: submitForm.leadName,
+          leadEmail: submitForm.leadEmail,
+          estimatedValue: Number(submitForm.estimatedValue),
         }),
       });
 
