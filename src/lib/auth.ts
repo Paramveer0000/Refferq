@@ -20,6 +20,7 @@ export interface RegisterData {
   password: string;
   name: string;
   role: string; // 'affiliate' or 'admin' from the form
+  invitationToken?: string;
 }
 
 class AuthService {
@@ -37,15 +38,6 @@ class AuthService {
    */
   async register(data: RegisterData): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email: data.email }
-      });
-
-      if (existingUser) {
-        return { success: false, message: 'User already exists with this email' };
-      }
-
       // Hash password
       const hashedPassword = await bcrypt.hash(data.password, 12);
 
@@ -54,31 +46,46 @@ class AuthService {
       const userRoleLower = data.role.toLowerCase();
       const initialStatus = 'ACTIVE';
 
-      // Create user using prisma client directly or db service
-      // We'll use prisma client here since we've already hashed the password
-      const user = await prisma.user.create({
-        data: {
-          email: data.email,
-          name: data.name,
-          password: hashedPassword,
-          role: data.role.toUpperCase() as Role,
-          status: initialStatus as UserStatus
+      const user = await prisma.$transaction(async (tx) => {
+        const existingUser = await tx.user.findUnique({ where: { email: data.email } });
+        if (existingUser) throw new Error('User already exists with this email');
+
+        const invitation = data.invitationToken
+          ? await tx.partnerInvitation.findUnique({ where: { token: data.invitationToken } })
+          : null;
+        if (data.invitationToken && (!invitation || invitation.acceptedAt || invitation.expiresAt <= new Date())) {
+          throw new Error('This invitation is invalid or has expired');
         }
-      });
+        if (invitation && invitation.email !== data.email.toLowerCase()) {
+          throw new Error('This invitation was sent to a different email address');
+        }
 
-      // If affiliate, create affiliate record
-      if (userRoleLower === 'affiliate') {
-        const referralCode = this.generateReferralCode(data.name);
-
-        await prisma.affiliate.create({
+        const createdUser = await tx.user.create({
           data: {
-            userId: user.id,
-            referralCode,
-            payoutDetails: {},
-            balanceCents: 0
-          }
+            email: data.email,
+            name: data.name,
+            password: hashedPassword,
+            role: data.role.toUpperCase() as Role,
+            status: initialStatus as UserStatus,
+          },
         });
-      }
+
+        if (userRoleLower === 'affiliate') {
+          await tx.affiliate.create({
+            data: {
+              userId: createdUser.id,
+              referralCode: this.generateReferralCode(data.name),
+              payoutDetails: {},
+              balanceCents: 0,
+              partnerGroupId: invitation?.partnerGroupId,
+            },
+          });
+        }
+        if (invitation) {
+          await tx.partnerInvitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });
+        }
+        return createdUser;
+      });
 
       return {
         success: true,
@@ -87,7 +94,7 @@ class AuthService {
       };
     } catch (error) {
       console.error('Registration error:', error);
-      return { success: false, message: 'Registration failed' };
+      return { success: false, message: error instanceof Error ? error.message : 'Registration failed' };
     }
   }
 

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, name, role } = body;
+    const { email, name, invitationToken } = body;
 
     // Validate required fields
     if (!email || !name) {
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       password: randomPassword,
       name: name.trim(),
       role: userRole,
+      invitationToken: typeof invitationToken === 'string' ? invitationToken : undefined,
     });
 
     if (!result.success) {

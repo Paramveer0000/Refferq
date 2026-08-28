@@ -37,6 +37,12 @@ export interface WelcomeEmailData {
   password?: string;
 }
 
+export interface PartnerInvitationEmailData {
+  email: string;
+  invitationUrl: string;
+  partnerGroupName?: string;
+}
+
 export interface ReferralNotificationData {
   affiliateName: string;
   leadName: string;
@@ -520,6 +526,20 @@ class EmailService {
       fallbackSubject: `Welcome to Refferq - ${data.role === 'affiliate' ? 'Affiliate' : 'Admin'} Account Created`,
       variables: data,
       generateFallbackHtml: () => this.generateWelcomeEmailHTML(data),
+    });
+  }
+
+  async sendPartnerInvitationEmail(data: PartnerInvitationEmailData): Promise<{ success: boolean; message: string }> {
+    return this.sendEmail({
+      to: data.email,
+      subject: 'You are invited to join Refferq',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1f2937">
+          <h1>Join Refferq</h1>
+          <p>You have been invited to join the Refferq affiliate program${data.partnerGroupName ? ` in the ${this.escapeHtml(data.partnerGroupName)} group` : ''}.</p>
+          <p><a href="${this.escapeHtml(data.invitationUrl)}" style="display:inline-block;background:#2563eb;color:white;padding:12px 20px;border-radius:6px;text-decoration:none">Accept invitation</a></p>
+          <p>This invitation expires in 7 days and can be used once.</p>
+        </div>`,
     });
   }
 

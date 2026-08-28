@@ -235,8 +235,24 @@ model PartnerGroup {
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
   affiliates     Affiliate[]
+  invitations    PartnerInvitation[]
 
   @@map("partner_groups")
+}
+
+model PartnerInvitation {
+  id             String        @id @default(cuid())
+  token          String        @unique
+  email          String
+  partnerGroupId String?       @map("partner_group_id")
+  partnerGroup   PartnerGroup? @relation(fields: [partnerGroupId], references: [id])
+  expiresAt      DateTime      @map("expires_at")
+  acceptedAt     DateTime?     @map("accepted_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("partner_invitations")
 }
 
 model Transaction {

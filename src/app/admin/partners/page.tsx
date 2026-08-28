@@ -91,6 +91,7 @@ export default function PartnersPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedPartners, setSelectedPartners] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviting, setInviting] = useState(false);
   const [currencySymbol, setCurrencySymbol] = useState('₹');
   const [sortField, setSortField] = useState<keyof Partner>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -234,6 +235,32 @@ export default function PartnersPage() {
     } catch (error) {
       console.error('Failed to create partner:', error);
       alert('Failed to create partner');
+    }
+  };
+
+  const handleInvitePartner = async () => {
+    if (!invitePartner.email) return;
+    setInviting(true);
+    try {
+      const response = await fetch('/api/admin/partner-invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: invitePartner.email, partnerGroup: invitePartner.partnerGroup }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        alert(data.error || 'Failed to send invitation');
+        return;
+      }
+      alert('Invitation email sent successfully.');
+      setShowInviteModal(false);
+      setInvitePartner({ email: '', partnerGroup: 'Default', inviteType: 'single' });
+      fetchPartners();
+    } catch (error) {
+      console.error('Failed to send partner invitation:', error);
+      alert('Failed to send invitation');
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -717,13 +744,11 @@ export default function PartnersPage() {
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                alert('Invite feature will send an email invitation to the partner.');
-                setShowInviteModal(false);
-              }}
+              onClick={handleInvitePartner}
+              disabled={inviting || !invitePartner.email}
             >
               <Mail className="mr-2 h-4 w-4" />
-              Send Invite
+              {inviting ? 'Sending...' : 'Send Invite'}
             </Button>
           </DialogFooter>
         </DialogContent>
