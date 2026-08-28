@@ -49,9 +49,10 @@ class AuthService {
       // Hash password
       const hashedPassword = await bcrypt.hash(data.password, 12);
 
-      // Determine initial status based on role
+      // Self-service registrations authenticate by email OTP, so affiliates
+      // must be active immediately in order to receive and verify that code.
       const userRoleLower = data.role.toLowerCase();
-      const initialStatus = userRoleLower === 'admin' ? 'ACTIVE' : 'PENDING';
+      const initialStatus = 'ACTIVE';
 
       // Create user using prisma client directly or db service
       // We'll use prisma client here since we've already hashed the password
