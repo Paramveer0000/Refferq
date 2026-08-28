@@ -37,6 +37,7 @@ import {
   Ban,
   Download,
 } from 'lucide-react';
+import { formatMinorCurrency } from '@/lib/money';
 
 interface Payout {
   id: string;
@@ -168,7 +169,7 @@ export default function PayoutsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currencySymbol}{(stats.totalPaid / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {formatMinorCurrency(stats.totalPaid, currencySymbol)}
             </div>
           </CardContent>
         </Card>
@@ -234,7 +235,7 @@ export default function PayoutsPage() {
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold">
-                          {currencySymbol}{(payout.amountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {formatMinorCurrency(payout.amountCents, currencySymbol)}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm">{payout.commissionCount}</TableCell>

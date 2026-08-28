@@ -67,6 +67,7 @@ import {
   Save,
   Layers,
 } from 'lucide-react';
+import { formatMinorCurrency } from '@/lib/money';
 
 // ────────────────────────────────────────────────
 //  Types
@@ -144,6 +145,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
+  const [currency, setCurrency] = useState('INR');
 
   // ── Scheduled Reports ──
   const [scheduled, setScheduled] = useState<ScheduledReport[]>([]);
@@ -182,6 +184,9 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchScheduled();
     fetchSaved();
+    fetch('/api/admin/settings').then((res) => res.json()).then((json) => {
+      if (json.success) setCurrency(json.settings.currency || 'INR');
+    }).catch(() => undefined);
   }, []);
 
   // ───────────── Standard Reports ─────────────
@@ -205,6 +210,7 @@ export default function ReportsPage() {
       }
       const json = await res.json();
       if (json.success) {
+        if (json.currency) setCurrency(json.currency);
         setData(json.report || json);
         if (json.report) {
           const report = json.report;
@@ -412,8 +418,8 @@ export default function ReportsPage() {
                         <span className="text-muted-foreground capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
                         <span className="font-medium">
                           {typeof v === 'number'
-                            ? k.toLowerCase().includes('cents')
-                              ? `₹${(v / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                            ? /cents|amount|earnings|balance/i.test(k)
+                              ? formatMinorCurrency(v, currency)
                               : v.toLocaleString()
                             : String(v)}
                         </span>
@@ -432,8 +438,8 @@ export default function ReportsPage() {
               <CardContent>
                 <p className="text-2xl font-bold">
                   {typeof value === 'number'
-                    ? key.toLowerCase().includes('cents')
-                      ? `₹${(value / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                    ? /cents|amount|earnings|balance/i.test(key)
+                      ? formatMinorCurrency(value, currency)
                       : value.toLocaleString()
                     : String(value)}
                 </p>
@@ -467,8 +473,8 @@ export default function ReportsPage() {
                   const val = row[col];
                   let display: string;
                   if (val === null || val === undefined) display = '—';
-                  else if (typeof val === 'number' && col.toLowerCase().includes('cents'))
-                    display = `₹${(val / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                  else if (typeof val === 'number' && /cents|amount|earnings|balance/i.test(col))
+                    display = formatMinorCurrency(val, currency);
                   else if (typeof val === 'number') display = val.toLocaleString();
                   else display = String(val);
                   return <TableCell key={col} className="text-sm whitespace-nowrap">{display}</TableCell>;
@@ -903,10 +909,10 @@ export default function ReportsPage() {
                             <TableCell className="text-right">{c.conversionRate}%</TableCell>
                             <TableCell className="text-right">{c.totalCommissions}</TableCell>
                             <TableCell className="text-right font-medium">
-                              ₹{(c.totalEarningsCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              {formatMinorCurrency(c.totalEarningsCents, currency)}
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
-                              ₹{(c.avgEarningsPerAffiliateCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              {formatMinorCurrency(c.avgEarningsPerAffiliateCents, currency)}
                             </TableCell>
                           </TableRow>
                         ))}

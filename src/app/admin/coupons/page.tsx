@@ -22,6 +22,7 @@ import {
 import {
   Ticket, Plus, Pencil, Trash2, Copy, Check,
 } from 'lucide-react';
+import { formatMajorAmount } from '@/lib/money';
 
 interface Coupon {
   id: string;
@@ -45,12 +46,18 @@ export default function CouponsPage() {
   const [editing, setEditing] = useState<Coupon | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [currency, setCurrency] = useState('INR');
   const [form, setForm] = useState({
     code: '', description: '', discountType: 'PERCENTAGE', discountValue: '',
     maxUses: '', affiliateId: '', expiresAt: '',
   });
 
-  useEffect(() => { fetchCoupons(); }, []);
+  useEffect(() => {
+    fetchCoupons();
+    fetch('/api/admin/settings').then((res) => res.json()).then((json) => {
+      if (json.success) setCurrency(json.settings.currency || 'INR');
+    }).catch(() => undefined);
+  }, []);
 
   const fetchCoupons = async () => {
     try {
@@ -239,7 +246,7 @@ export default function CouponsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {c.discountType === 'PERCENTAGE' ? `${c.discountValue}%` : `₹${c.discountValue}`}
+                        {c.discountType === 'PERCENTAGE' ? `${c.discountValue}%` : formatMajorAmount(c.discountValue, currency)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{c.usedCount}{c.maxUses ? `/${c.maxUses}` : ''}</TableCell>
@@ -286,7 +293,7 @@ export default function CouponsPage() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PERCENTAGE">Percentage (%)</SelectItem>
-                    <SelectItem value="FIXED">Fixed Amount (₹)</SelectItem>
+                    <SelectItem value="FIXED">Fixed Amount</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

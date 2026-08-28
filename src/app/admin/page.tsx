@@ -37,6 +37,7 @@ import {
   Activity,
   Eye,
 } from 'lucide-react';
+import { formatMinorCurrency } from '@/lib/money';
 
 interface DashboardStats {
   totalRevenue: number;
@@ -75,6 +76,7 @@ export default function AdminDashboardPage() {
   const [topAffiliates, setTopAffiliates] = useState<TopAffiliate[]>([]);
   const [recentCustomers, setRecentCustomers] = useState<RecentCustomer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState('INR');
 
   useEffect(() => {
     if (user && user.role === 'ADMIN') {
@@ -85,17 +87,20 @@ export default function AdminDashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, analyticsRes, referralsRes] = await Promise.all([
+      const [statsRes, analyticsRes, referralsRes, settingsRes] = await Promise.all([
         fetch('/api/admin/dashboard'),
         fetch('/api/admin/analytics?days=30'),
         fetch('/api/admin/referrals'),
+        fetch('/api/admin/settings'),
       ]);
 
-      const [statsData, analyticsData, referralsData] = await Promise.all([
+      const [statsData, analyticsData, referralsData, settingsData] = await Promise.all([
         statsRes.json(),
         analyticsRes.json(),
         referralsRes.json(),
+        settingsRes.json(),
       ]);
+      if (settingsData.success) setCurrency(settingsData.settings.currency || 'INR');
 
       if (statsData.success) {
         setStats({
@@ -140,7 +145,7 @@ export default function AdminDashboardPage() {
   const statCards = [
     {
       title: 'Estimated Revenue',
-      value: `₹${stats ? (stats.totalEstimatedRevenue / 100).toFixed(2) : '0.00'}`,
+      value: formatMinorCurrency(stats?.totalEstimatedRevenue || 0, currency),
       icon: IndianRupee,
       description: 'Total projected value',
       trend: '+12%',
@@ -150,7 +155,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Confirmed Revenue',
-      value: `₹${stats ? (stats.totalRevenue / 100).toFixed(2) : '0.00'}`,
+      value: formatMinorCurrency(stats?.totalRevenue || 0, currency),
       icon: TrendingUp,
       description: 'Approved transactions',
       color: 'text-emerald-600',
@@ -158,7 +163,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Commission Owed',
-      value: `₹${stats ? (stats.totalEstimatedCommission / 100).toFixed(2) : '0.00'}`,
+      value: formatMinorCurrency(stats?.totalEstimatedCommission || 0, currency),
       icon: Wallet,
       description: 'Pending payouts',
       color: 'text-amber-600',
@@ -376,7 +381,7 @@ export default function AdminDashboardPage() {
                         <p className="text-xs text-muted-foreground font-mono">{affiliate.referralCode}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-semibold">₹{(affiliate.totalRevenue / 100).toFixed(2)}</p>
+                        <p className="text-sm font-semibold">{formatMinorCurrency(affiliate.totalRevenue, currency)}</p>
                         <p className="text-[11px] text-muted-foreground">{affiliate.totalReferrals} referrals</p>
                       </div>
                     </div>

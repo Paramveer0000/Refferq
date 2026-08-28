@@ -61,6 +61,7 @@ import {
   Zap,
   Clock,
 } from 'lucide-react';
+import { formatMajorAmount, fromMinorUnits, toMinorUnits } from '@/lib/money';
 
 interface ProgramSettings {
   id: string;
@@ -122,7 +123,10 @@ export default function ProgramSettingsPage() {
       const res = await fetch('/api/admin/settings');
       const data = await res.json();
       if (data.success) {
-        setSettings(data.settings);
+        setSettings({
+          ...data.settings,
+          minimumPayoutThreshold: fromMinorUnits(data.settings.minimumPayoutThreshold || 0),
+        });
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -145,7 +149,7 @@ export default function ProgramSettingsPage() {
           websiteUrl: settings.websiteUrl,
           currency: settings.currency,
           portalSubdomain: settings.portalSubdomain,
-          minimumPayoutThreshold: settings.minimumPayoutThreshold,
+          minimumPayoutThreshold: toMinorUnits(settings.minimumPayoutThreshold),
           payoutTerm: settings.payoutTerm,
           commissionHoldDays: settings.commissionHoldDays,
         }),
@@ -330,13 +334,13 @@ export default function ProgramSettingsPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="minimumPayoutThreshold">Min Payout Threshold (cents)</Label>
+              <Label htmlFor="minimumPayoutThreshold">Min Payout Threshold ({settings.currency})</Label>
               <Input
                 id="minimumPayoutThreshold"
                 type="number"
                 value={settings.minimumPayoutThreshold}
                 onChange={(e) =>
-                  setSettings({ ...settings, minimumPayoutThreshold: parseInt(e.target.value) || 0 })
+                  setSettings({ ...settings, minimumPayoutThreshold: Number(e.target.value) || 0 })
                 }
               />
             </div>
@@ -493,7 +497,7 @@ export default function ProgramSettingsPage() {
                       <Badge variant="outline">{rule.type}</Badge>
                     </TableCell>
                     <TableCell>
-                      {rule.type === 'PERCENTAGE' ? `${rule.value}%` : `₹${rule.value}`}
+                      {rule.type === 'PERCENTAGE' ? `${rule.value}%` : formatMajorAmount(rule.value, settings.currency)}
                     </TableCell>
                     <TableCell>
                       {rule.isDefault && <Badge variant="default">Default</Badge>}
@@ -584,7 +588,7 @@ export default function ProgramSettingsPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-sm font-medium">Call this when a visitor completes a conversion event</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleCopySnippet('conversion', `// Track a conversion (e.g. after signup or purchase)\nRefferq.trackConversion({\n  email: customer.email,\n  name: customer.name,\n  amount: 4999,        // amount in smallest unit (e.g. paise / cents)\n  currency: '${settings.currency || 'INR'}',\n  orderId: 'ORD-12345' // optional\n});`)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleCopySnippet('conversion', `// Track a conversion (e.g. after signup or purchase)\nRefferq.trackConversion({\n  email: customer.email,\n  name: customer.name,\n  amount: 49.99,       // amount in ${settings.currency || 'INR'}\n  currency: '${settings.currency || 'INR'}',\n  orderId: 'ORD-12345' // optional\n});`)}>
                     {copiedSnippet === 'conversion' ? <><CheckCircle2 className="mr-1 h-3.5 w-3.5 text-green-600" />Copied</> : <><Copy className="mr-1 h-3.5 w-3.5" />Copy</>}
                   </Button>
                 </div>
@@ -593,7 +597,7 @@ export default function ProgramSettingsPage() {
 Refferq.trackConversion({
   email: customer.email,
   name: customer.name,
-  amount: 4999,        // amount in smallest unit (e.g. paise / cents)
+  amount: 49.99,       // amount in ${settings.currency || 'INR'}
   currency: '${settings.currency || 'INR'}',
   orderId: 'ORD-12345' // optional
 });`}

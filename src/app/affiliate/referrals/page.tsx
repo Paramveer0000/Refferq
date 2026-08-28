@@ -70,6 +70,7 @@ export default function ReferralsPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currencySymbol, setCurrencySymbol] = useState('₹');
   const [submitForm, setSubmitForm] = useState({
     leadName: '',
     leadEmail: '',
@@ -83,9 +84,10 @@ export default function ReferralsPage() {
   const fetchReferrals = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/affiliate/referrals');
-      const data = await res.json();
+      const [res, profileRes] = await Promise.all([fetch('/api/affiliate/referrals'), fetch('/api/affiliate/profile')]);
+      const [data, profile] = await Promise.all([res.json(), profileRes.json()]);
       if (data.success) setReferrals(data.referrals || []);
+      if (profile.success) setCurrencySymbol(profile.currencySymbol || '₹');
     } catch (error) {
       console.error('Failed to fetch referrals:', error);
     } finally {
@@ -345,7 +347,7 @@ export default function ReferralsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Estimated Deal Size (₹) *</Label>
+              <Label>Estimated Deal Size ({currencySymbol}) *</Label>
               <Input
                 type="number"
                 required

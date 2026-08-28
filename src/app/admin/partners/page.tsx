@@ -64,6 +64,7 @@ import {
   UserPlus,
   ArrowUpDown,
 } from 'lucide-react';
+import { formatMinorCurrency, fromMinorUnits } from '@/lib/money';
 
 interface Partner {
   id: string;
@@ -310,7 +311,7 @@ export default function PartnersPage() {
         [
           `"${p.name}"`, p.email, p.referralCode, p.status,
           new Date(p.createdAt).toLocaleDateString(), p.clicks, p.leads,
-          p.customers, (p.revenue / 100).toFixed(2), (p.earnings / 100).toFixed(2),
+          p.customers, fromMinorUnits(p.revenue).toFixed(2), fromMinorUnits(p.earnings).toFixed(2),
         ].join(',')
       ),
     ].join('\n');
@@ -575,10 +576,10 @@ export default function PartnersPage() {
                       <TableCell>{partner.leads}</TableCell>
                       <TableCell>{partner.customers}</TableCell>
                       <TableCell className="text-right font-medium">
-                        {currencySymbol}{(partner.revenue / 100).toFixed(2)}
+                        {formatMinorCurrency(partner.revenue, currencySymbol)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {currencySymbol}{(partner.earnings / 100).toFixed(2)}
+                        {formatMinorCurrency(partner.earnings, currencySymbol)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(partner.createdAt).toLocaleDateString('en-US', {

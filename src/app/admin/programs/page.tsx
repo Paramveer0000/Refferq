@@ -22,6 +22,7 @@ import {
 import {
   Layers, Plus, Star, Percent, Clock, Globe, Edit, Trash2,
 } from 'lucide-react';
+import { formatMinorCurrency, fromMinorUnits, toMinorUnits } from '@/lib/money';
 
 interface Program {
   id: string;
@@ -45,7 +46,7 @@ interface Program {
 
 const emptyForm = {
   name: '', slug: '', description: '', commissionRate: '20', commissionType: 'PERCENTAGE',
-  cookieDuration: '30', currency: 'INR', autoApprove: false, minPayoutCents: '100000',
+  cookieDuration: '30', currency: 'INR', autoApprove: false, minPayoutCents: '1000',
   payoutFrequency: 'MONTHLY', termsUrl: '', logoUrl: '', brandColor: '#6366f1',
 };
 
@@ -83,7 +84,7 @@ export default function ProgramsPage() {
       name: p.name, slug: p.slug, description: p.description || '',
       commissionRate: String(p.commissionRate), commissionType: p.commissionType,
       cookieDuration: String(p.cookieDuration), currency: p.currency,
-      autoApprove: p.autoApprove, minPayoutCents: String(p.minPayoutCents),
+      autoApprove: p.autoApprove, minPayoutCents: String(fromMinorUnits(p.minPayoutCents)),
       payoutFrequency: p.payoutFrequency, termsUrl: p.termsUrl || '',
       logoUrl: p.logoUrl || '', brandColor: p.brandColor || '#6366f1',
     });
@@ -97,7 +98,7 @@ export default function ProgramsPage() {
         name: form.name, slug: form.slug, description: form.description || null,
         commissionRate: parseFloat(form.commissionRate), commissionType: form.commissionType,
         cookieDuration: parseInt(form.cookieDuration), currency: form.currency,
-        autoApprove: form.autoApprove, minPayoutCents: parseInt(form.minPayoutCents),
+        autoApprove: form.autoApprove, minPayoutCents: toMinorUnits(form.minPayoutCents),
         payoutFrequency: form.payoutFrequency,
         termsUrl: form.termsUrl || null, logoUrl: form.logoUrl || null,
         brandColor: form.brandColor || null,
@@ -154,10 +155,7 @@ export default function ProgramsPage() {
     } catch (error) { console.error('Failed to delete program:', error); }
   };
 
-  const formatCurrency = (cents: number, currency: string = 'INR') => {
-    const symbol = currency === 'INR' ? '\u20B9' : currency === 'USD' ? '$' : currency === 'EUR' ? '\u20AC' : currency;
-    return `${symbol}${(cents / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
-  };
+  const formatCurrency = (minorUnits: number, currency: string = 'INR') => formatMinorCurrency(minorUnits, currency);
 
   const stats = {
     total: programs.length,
@@ -358,8 +356,8 @@ export default function ProgramsPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Min Payout (cents)</Label>
-                <Input type="number" value={form.minPayoutCents} onChange={e => setForm({...form, minPayoutCents: e.target.value})} />
+                <Label>Min Payout ({form.currency})</Label>
+                <Input type="number" step="0.01" min="0" value={form.minPayoutCents} onChange={e => setForm({...form, minPayoutCents: e.target.value})} />
               </div>
               <div className="grid gap-2">
                 <Label>Payout Frequency</Label>

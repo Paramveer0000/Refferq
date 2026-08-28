@@ -21,6 +21,7 @@ import {
 import {
   FileText, Plus, Eye, IndianRupee, CheckCircle2, Clock, AlertCircle, Trash2,
 } from 'lucide-react';
+import { formatMinorCurrency, toMinorUnits } from '@/lib/money';
 
 interface Invoice {
   id: string;
@@ -46,11 +47,17 @@ export default function InvoicesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
+  const [currency, setCurrency] = useState('INR');
   const [form, setForm] = useState({
     affiliateId: '', amountCents: '', taxCents: '0', notes: '', dueAt: '',
   });
 
-  useEffect(() => { fetchInvoices(); }, []);
+  useEffect(() => {
+    fetchInvoices();
+    fetch('/api/admin/settings').then((res) => res.json()).then((json) => {
+      if (json.success) setCurrency(json.settings.currency || 'INR');
+    }).catch(() => undefined);
+  }, []);
 
   const fetchInvoices = async () => {
     try {
@@ -72,8 +79,9 @@ export default function InvoicesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           affiliateId: form.affiliateId,
-          amountCents: parseInt(form.amountCents),
-          taxCents: parseInt(form.taxCents) || 0,
+          amountCents: toMinorUnits(form.amountCents),
+          taxCents: toMinorUnits(form.taxCents),
+          currency,
           notes: form.notes || null,
           dueAt: form.dueAt || null,
         }),
@@ -118,8 +126,7 @@ export default function InvoicesPage() {
     }
   };
 
-  const formatCurrency = (cents: number) =>
-    `\u20B9${(cents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (minorUnits: number, currency = 'INR') => formatMinorCurrency(minorUnits, currency);
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -233,9 +240,9 @@ export default function InvoicesPage() {
                   <TableRow key={inv.id}>
                     <TableCell className="font-mono text-sm font-medium">{inv.invoiceNumber}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{inv.affiliateId.slice(0, 8)}...</TableCell>
-                    <TableCell>{formatCurrency(inv.amountCents)}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatCurrency(inv.taxCents)}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(inv.totalCents)}</TableCell>
+                    <TableCell>{formatCurrency(inv.amountCents, inv.currency)}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatCurrency(inv.taxCents, inv.currency)}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(inv.totalCents, inv.currency)}</TableCell>
                     <TableCell>{getStatusBadge(inv.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{inv.issuedAt ? formatDate(inv.issuedAt) : '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{inv.dueAt ? formatDate(inv.dueAt) : '—'}</TableCell>
@@ -278,13 +285,13 @@ export default function InvoicesPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Amount (cents) *</Label>
-                <Input type="number" value={form.amountCents} onChange={e => setForm({...form, amountCents: e.target.value})} placeholder="100000" />
-                <p className="text-xs text-muted-foreground">100000 = ₹1,000</p>
+                <Label>Amount ({currency}) *</Label>
+                <Input type="number" step="0.01" min="0" value={form.amountCents} onChange={e => setForm({...form, amountCents: e.target.value})} placeholder="1000.00" />
+                <p className="text-xs text-muted-foreground">Enter the amount customers should see on the invoice.</p>
               </div>
               <div className="grid gap-2">
-                <Label>Tax (cents)</Label>
-                <Input type="number" value={form.taxCents} onChange={e => setForm({...form, taxCents: e.target.value})} placeholder="0" />
+                <Label>Tax ({currency})</Label>
+                <Input type="number" step="0.01" min="0" value={form.taxCents} onChange={e => setForm({...form, taxCents: e.target.value})} placeholder="0.00" />
               </div>
             </div>
             <div className="grid gap-2">
@@ -324,15 +331,15 @@ export default function InvoicesPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Amount</p>
-                  <p className="font-semibold mt-1">{formatCurrency(viewInvoice.amountCents)}</p>
+                  <p className="font-semibold mt-1">{formatCurrency(viewInvoice.amountCents, viewInvoice.currency)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Tax</p>
-                  <p className="mt-1">{formatCurrency(viewInvoice.taxCents)}</p>
+                  <p className="mt-1">{formatCurrency(viewInvoice.taxCents, viewInvoice.currency)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Total</p>
-                  <p className="font-bold text-lg mt-1">{formatCurrency(viewInvoice.totalCents)}</p>
+                  <p className="font-bold text-lg mt-1">{formatCurrency(viewInvoice.totalCents, viewInvoice.currency)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Due Date</p>

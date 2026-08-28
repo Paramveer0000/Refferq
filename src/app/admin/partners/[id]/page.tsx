@@ -59,6 +59,7 @@ import {
   AlertCircle,
   Ban,
 } from 'lucide-react';
+import { formatMinorCurrency } from '@/lib/money';
 
 interface Partner {
   id: string;
@@ -121,6 +122,7 @@ export default function PartnerDetailPage() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [editingPayout, setEditingPayout] = useState<Payout | null>(null);
   const [newStatus, setNewStatus] = useState<'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'>('PENDING');
+  const [currencySymbol, setCurrencySymbol] = useState('₹');
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'ADMIN')) {
@@ -140,6 +142,7 @@ export default function PartnerDetailPage() {
       const res = await fetch('/api/admin/affiliates');
       if (res.ok) {
         const data = await res.json();
+        setCurrencySymbol(data.currencySymbol || '₹');
         const affiliate = data.affiliates?.find((a: any) => a.id === partnerId);
         if (affiliate) {
           setPartner({
@@ -288,8 +291,7 @@ export default function PartnerDetailPage() {
     );
   };
 
-  const formatCurrency = (cents: number) =>
-    `\u20B9${(cents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (minorUnits: number) => formatMinorCurrency(minorUnits, currencySymbol);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });

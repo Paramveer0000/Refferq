@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { fromMinorUnits } from '@/lib/money';
 
 
 export async function GET(request: NextRequest) {
@@ -29,6 +30,8 @@ export async function GET(request: NextRequest) {
         lte: new Date(endDate)
       }
     } : {};
+    const settings = await prisma.programSettings.findFirst({ select: { currency: true } });
+    const currency = settings?.currency || 'INR';
 
     let reportData: any = {};
 
@@ -203,7 +206,7 @@ export async function GET(request: NextRequest) {
 
     // Return as CSV if requested
     if (format === 'csv') {
-      const csv = convertToCSV(reportData.data || [reportData.summary]);
+      const csv = convertToCSV(formatMoneyForExport(reportData.data || [reportData.summary], currency));
       return new NextResponse(csv, {
         status: 200,
         headers: {
@@ -215,7 +218,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      report: reportData
+      report: reportData,
+      currency,
     });
 
   } catch (error) {
@@ -238,4 +242,13 @@ function convertToCSV(data: any[]): string {
   );
   
   return [headers, ...rows].join('\n');
+}
+
+function formatMoneyForExport(data: any[], _currency: string): any[] {
+  return data.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => {
+    if (typeof value === 'number' && /amount|earnings|balance/i.test(key)) {
+      return [key, fromMinorUnits(value).toFixed(2)];
+    }
+    return [key, value];
+  })));
 }

@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import { formatMinorCurrency, fromMinorUnits } from '@/lib/money';
 
 interface Payout {
   id: string;
@@ -76,8 +77,7 @@ export default function PayoutsPage() {
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 
-  const formatCurrency = (cents: number) =>
-    `${currencySymbol}${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (minorUnits: number) => formatMinorCurrency(minorUnits, currencySymbol);
 
   const getStatusBadge = (status: string) => {
     const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType }> = {
@@ -105,7 +105,7 @@ export default function PayoutsPage() {
       formatDate(p.paidAt || p.createdAt),
       p.method,
       p.status,
-      (p.amount / 100).toFixed(2),
+      fromMinorUnits(p.amount).toFixed(2),
     ]);
     const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });

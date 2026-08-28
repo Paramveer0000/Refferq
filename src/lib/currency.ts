@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { formatMinorCurrency } from './money';
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
     'USD': '$',
@@ -22,11 +23,7 @@ export async function getCurrencySymbol(): Promise<string> {
 }
 
 export function formatCurrency(cents: number, symbol: string): string {
-    const amount = cents / 100;
-    return `${symbol}${amount.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
+    return formatMinorCurrency(cents, symbol);
 }
 
 export async function formatAmount(cents: number): Promise<string> {

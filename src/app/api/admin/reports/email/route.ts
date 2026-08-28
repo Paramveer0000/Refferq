@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resend } from '@/lib/email';
+import { formatMinorCurrency, fromMinorUnits } from '@/lib/money';
 
 async function verifyAdmin(request: NextRequest) {
   try {
@@ -33,11 +34,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const settings = await prisma.programSettings.findFirst({ select: { currency: true } });
+    const currency = settings?.currency || 'INR';
+
     // Generate report data
     const reportData = await generateReportData(reportType, startDate, endDate);
 
     // Format as CSV
-    const csvContent = convertToCSV(reportData.data || [reportData.summary || reportData]);
+    const csvContent = convertToCSV(formatMoneyForExport(reportData.data || [reportData.summary || reportData], currency));
 
     // Build email HTML
     const reportDate = new Date().toLocaleDateString('en-IN', {
@@ -71,8 +75,8 @@ export async function POST(request: NextRequest) {
         ${startDate && endDate ? `<p style="margin: 0; opacity: 0.8; font-size: 14px;">${startDate} — ${endDate}</p>` : ''}
       </div>
       <div class="content">
-        ${reportData.summary ? renderSummaryHTML(reportData.summary) : ''}
-        ${reportData.data && reportData.data.length > 0 ? renderTableHTML(reportData.data.slice(0, 20)) : ''}
+        ${reportData.summary ? renderSummaryHTML(reportData.summary, currency) : ''}
+        ${reportData.data && reportData.data.length > 0 ? renderTableHTML(reportData.data.slice(0, 20), currency) : ''}
         ${reportData.data && reportData.data.length > 20 ? `<p style="color: #888; font-size: 13px;">Showing 20 of ${reportData.data.length} records. Full data attached as CSV.</p>` : ''}
         <p style="margin-top: 20px;">
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/reports" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
@@ -227,7 +231,7 @@ async function generateReportData(reportType: string, startDate?: string, endDat
   };
 }
 
-function renderSummaryHTML(summary: Record<string, unknown>): string {
+function renderSummaryHTML(summary: Record<string, unknown>, currency: string): string {
   return `<div style="margin: 15px 0;">
     ${Object.entries(summary)
       .map(
@@ -235,7 +239,7 @@ function renderSummaryHTML(summary: Record<string, unknown>): string {
       <div class="stat">
         <div class="stat-value">${
           typeof value === 'number' && key.toLowerCase().includes('cents')
-            ? '₹' + (value / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })
+            ? formatMinorCurrency(value, currency)
             : value
         }</div>
         <div class="stat-label">${key.replace(/([A-Z])/g, ' $1').replace(/cents$/i, '').trim()}</div>
@@ -245,7 +249,7 @@ function renderSummaryHTML(summary: Record<string, unknown>): string {
   </div>`;
 }
 
-function renderTableHTML(data: Record<string, unknown>[]): string {
+function renderTableHTML(data: Record<string, unknown>[], currency: string): string {
   if (data.length === 0) return '';
   const cols = Object.keys(data[0]);
   return `
@@ -257,7 +261,7 @@ function renderTableHTML(data: Record<string, unknown>[]): string {
             .map((c) => {
               const v = row[c];
               if (typeof v === 'number' && c.toLowerCase().includes('cents')) {
-                return `<td>₹${(v / 100).toFixed(2)}</td>`;
+                return `<td>${formatMinorCurrency(v, currency)}</td>`;
               }
               return `<td>${v ?? '—'}</td>`;
             })
@@ -265,6 +269,15 @@ function renderTableHTML(data: Record<string, unknown>[]): string {
         )
         .join('')}</tbody>
     </table>`;
+}
+
+function formatMoneyForExport(data: Record<string, unknown>[], currency: string): Record<string, unknown>[] {
+  return data.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => {
+    if (typeof value === 'number' && /cents|amount|earnings|balance/i.test(key)) {
+      return [key.replace(/cents$/i, ''), fromMinorUnits(value).toFixed(2)];
+    }
+    return [key, value];
+  })));
 }
 
 function convertToCSV(data: Record<string, unknown>[]): string {

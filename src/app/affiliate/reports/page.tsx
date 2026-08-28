@@ -35,6 +35,7 @@ import {
   Download,
   Calendar,
 } from 'lucide-react';
+import { formatMinorCurrency, fromMinorUnits } from '@/lib/money';
 
 interface ReportStats {
   totalEarnings: number;
@@ -63,6 +64,7 @@ export default function ReportsPage() {
     conversionRate: 0,
   });
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [currencySymbol, setCurrencySymbol] = useState('₹');
 
   useEffect(() => {
     if (!authLoading && user) fetchReportData();
@@ -74,6 +76,7 @@ export default function ReportsPage() {
       const res = await fetch('/api/affiliate/profile');
       const data = await res.json();
       if (data.success) {
+        setCurrencySymbol(data.currencySymbol || '₹');
         const referrals = data.referrals || [];
         const commissions = data.commissions || [];
         const conversions = data.conversions || [];
@@ -134,12 +137,11 @@ export default function ReportsPage() {
     }
   };
 
-  const formatCurrency = (cents: number) =>
-    `\u20B9${(cents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (minorUnits: number) => formatMinorCurrency(minorUnits, currencySymbol);
 
   const exportCSV = () => {
-    const headers = ['Month', 'Referrals', 'Conversions', 'Earnings (₹)'];
-    const rows = monthlyData.map((m) => [m.month, m.referrals, m.conversions, (m.earnings / 100).toFixed(2)]);
+    const headers = ['Month', 'Referrals', 'Conversions', `Earnings (${currencySymbol})`];
+    const rows = monthlyData.map((m) => [m.month, m.referrals, m.conversions, fromMinorUnits(m.earnings).toFixed(2)]);
     const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

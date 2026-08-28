@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { affiliateId, payoutId, amountCents, taxCents, lineItems, billingInfo, notes, dueAt } = body;
+    const { affiliateId, payoutId, amountCents, taxCents, currency, lineItems, billingInfo, notes, dueAt } = body;
 
     if (!affiliateId || !amountCents) {
       return NextResponse.json({ error: 'Affiliate ID and amount are required' }, { status: 400 });
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
         amountCents,
         taxCents: tax,
         totalCents: total,
+        currency: currency || 'INR',
         lineItems: lineItems || [{ description: 'Affiliate commission payout', qty: 1, unitPrice: amountCents, total: amountCents }],
         billingInfo: billingInfo || {},
         notes: notes || null,
