@@ -32,3 +32,16 @@ test('invite dialog posts to the partner invitation endpoint', async () => {
   assert.match(page, /fetch\('\/api\/admin\/partner-invitations'/);
   assert.doesNotMatch(page, /Invite feature will send an email invitation/);
 });
+
+test('partners API includes outstanding invitations as INVITED rows', async () => {
+  const route = await read('src/app/api/admin/affiliates/route.ts');
+  assert.match(route, /prisma\.partnerInvitation\.findMany/);
+  assert.match(route, /invitations,/);
+});
+
+test('new and accepted invited partners require approval', async () => {
+  const createRoute = await read('src/app/api/admin/affiliates/route.ts');
+  const auth = await read('src/lib/auth.ts');
+  assert.match(createRoute, /status: 'PENDING'/);
+  assert.match(auth, /const initialStatus = data\.invitationToken \? 'PENDING' : 'ACTIVE';/);
+});

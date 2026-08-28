@@ -44,7 +44,7 @@ class AuthService {
       // Self-service registrations authenticate by email OTP, so affiliates
       // must be active immediately in order to receive and verify that code.
       const userRoleLower = data.role.toLowerCase();
-      const initialStatus = 'ACTIVE';
+      const initialStatus = data.invitationToken ? 'PENDING' : 'ACTIVE';
 
       const user = await prisma.$transaction(async (tx) => {
         const existingUser = await tx.user.findUnique({ where: { email: data.email } });

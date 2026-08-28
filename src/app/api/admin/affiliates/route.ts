@@ -43,6 +43,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    const invitations = await prisma.partnerInvitation.findMany({
+      where: { acceptedAt: null, expiresAt: { gt: new Date() } },
+      include: { partnerGroup: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
     // Get currency symbol
     const { getCurrencySymbol } = await import('@/lib/currency');
     const currencySymbol = await getCurrencySymbol();
@@ -50,6 +56,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       affiliates,
+      invitations,
       currencySymbol, // Add currency symbol to response
     });
   } catch (error) {
@@ -118,7 +125,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         role: 'AFFILIATE',
-        status: 'ACTIVE',
+        status: 'PENDING',
         password: hashedPassword
       }
     });

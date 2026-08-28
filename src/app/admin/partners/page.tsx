@@ -130,7 +130,7 @@ export default function PartnersPage() {
       const data = await response.json();
 
       if (data.success) {
-        const formattedPartners = data.affiliates.map((aff: any) => ({
+        const formattedAffiliates = data.affiliates.map((aff: any) => ({
           id: aff.id,
           userId: aff.userId,
           name: aff.user.name,
@@ -145,7 +145,22 @@ export default function PartnersPage() {
           earnings: aff.balanceCents || 0,
           groupName: '',
         }));
-        setPartners(formattedPartners);
+        const formattedInvitations = (data.invitations || []).map((invitation: any) => ({
+          id: `invitation-${invitation.id}`,
+          userId: '',
+          name: 'Invited partner',
+          email: invitation.email,
+          referralCode: '—',
+          status: 'INVITED',
+          createdAt: invitation.createdAt,
+          clicks: 0,
+          leads: 0,
+          customers: 0,
+          revenue: 0,
+          earnings: 0,
+          groupName: invitation.partnerGroup?.name || 'Default',
+        }));
+        setPartners([...formattedAffiliates, ...formattedInvitations]);
         setCurrencySymbol(data.currencySymbol || '₹');
       }
     } catch (error) {
